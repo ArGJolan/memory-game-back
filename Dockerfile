@@ -5,8 +5,10 @@ ENV NODE_ENV=production
 # Copy app
 RUN mkdir -p /opt/app
 WORKDIR /opt/app
-COPY ./package.json /opt/app
+
+COPY ./package*.json ./
 RUN npm install --production
+
 COPY . /opt/app
 
 EXPOSE 1024
