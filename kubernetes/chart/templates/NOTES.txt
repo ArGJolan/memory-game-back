@@ -1,0 +1,3 @@
+Installed {{ .Values.name }}!
+
+Go to https://{{ .Values.subdomain }}.{{ .Values.domain }}{{ .Values.domainPath }} to see it up!
