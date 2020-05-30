@@ -1,0 +1,161 @@
+kind: pipeline
+type: kubernetes
+name: default
+steps:
+  ####################################################
+  ####################################################
+  #############                          #############
+  #############                          #############
+  #############           TEST           #############
+  #############                          #############
+  #############                          #############
+  ####################################################
+  ####################################################
+  - name: Run test suite
+    image: node:12.16.1-alpine
+    commands:
+    - npm install
+    - npm run test
+    when:
+      event:
+      - push
+
+  ####################################################
+  ####################################################
+  #############                          #############
+  #############                          #############
+  #############           BUILD          #############
+  #############                          #############
+  #############                          #############
+  ####################################################
+  ####################################################
+  - name: Build & Publish
+    image: banzaicloud/drone-kaniko
+    settings:
+      registry:
+        from_secret: docker_registry
+      cache: true
+      repo: ${DRONE_REPO_NAME,,}
+      tags:
+        - "latest"
+        - "drone-${DRONE_BUILD_NUMBER}"
+        - "${DRONE_COMMIT_SHA:0:7}"
+        - "${DRONE_COMMIT_BRANCH}"
+      username:
+        from_secret: docker_username
+      password:
+        from_secret: docker_password
+    when:
+      branch:
+      - master
+      - develop
+      event:
+      - push
+
+  - name: Build & Publish feature
+    image: banzaicloud/drone-kaniko
+    settings:
+      registry:
+        from_secret: docker_registry
+      cache: true
+      repo: ${DRONE_REPO_NAME,,}
+      tags:
+        - "latest"
+        - "drone-${DRONE_BUILD_NUMBER}"
+        - "${DRONE_COMMIT_SHA:0:7}"
+        - "feature"
+      username:
+        from_secret: docker_username
+      password:
+        from_secret: docker_password
+    when:
+      branch:
+      - feature/*
+      event:
+      - push
+
+  ####################################################
+  ####################################################
+  #############                          #############
+  #############                          #############
+  #############          DEPLOYS         #############
+  #############                          #############
+  #############                          #############
+  ####################################################
+  ####################################################
+  - name: Production deploy 
+    image: pelotech/drone-helm3
+    settings:
+      update_dependencies: true
+      service_account: default
+      skip_tls_verify: true
+      chart: ./kubernetes/chart
+      values_files:
+        - ./kubernetes/chart/values.yaml
+        - ./kubernetes/chart/values-production.yaml
+      release: ${DRONE_REPO_NAME,,}-production
+      string_values:
+        from_secret: helm_values
+      api_server:
+        from_secret: PROD_API_SERVER
+      kubernetes_token:
+        from_secret: PROD_KUBERNETES_TOKEN
+      namespace: production
+      debug: true
+    when:
+      branch:
+      - master
+      event:
+      - push
+
+  - name: Feature deploy 
+    image: pelotech/drone-helm3
+    settings:
+      update_dependencies: true
+      service_account: default
+      skip_tls_verify: true
+      chart: ./kubernetes/chart
+      values_files:
+        - ./kubernetes/chart/values.yaml
+        - ./kubernetes/chart/values-feature.yaml
+      release: ${DRONE_REPO_NAME,,}-feature
+      string_values:
+        from_secret: helm_values
+      api_server:
+        from_secret: PROD_API_SERVER
+      kubernetes_token:
+        from_secret: PROD_KUBERNETES_TOKEN
+      namespace: feature
+      debug: true
+    when:
+      branch:
+      - feature/*
+      event:
+      - push
+
+  - name: Develop deploy 
+    image: pelotech/drone-helm3
+    settings:
+      update_dependencies: true
+      service_account: default
+      skip_tls_verify: true
+      chart: ./kubernetes/chart
+      values_files:
+        - ./kubernetes/chart/values.yaml
+        - ./kubernetes/chart/values-develop.yaml
+      release: ${DRONE_REPO_NAME,,}-develop
+      string_values:
+        from_secret: helm_values
+      api_server:
+        from_secret: PROD_API_SERVER
+      kubernetes_token:
+        from_secret: PROD_KUBERNETES_TOKEN
+      namespace: develop
+      debug: true
+    when:
+      branch:
+        exclude:
+        - master
+        - feature/*
+      event:
+      - push
