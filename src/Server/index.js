@@ -1,5 +1,6 @@
 const express = require('express');
 const http = require('http');
+const cors = require('cors');
 
 class Server {
   constructor (app, config) {
@@ -13,6 +14,9 @@ class Server {
 
     // Config server
     this.server = express();
+    if (this.config.cors) {
+      this.server.use(cors(this.config.cors));
+    }
     this.server.use(this.httpLogger.bind(this));
     this.server.get('/random/:count', this.app.RandomController.generate.bind(this.app.RandomController));
     // New routes go here
