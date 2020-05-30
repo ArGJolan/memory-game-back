@@ -1,0 +1,24 @@
+name: memory-game-back
+
+subdomain: memory-game
+domainPath: /api(/|$)(.*)
+
+image:
+  registry: registry.argjolan.ovh
+  tag: latest
+
+imagePullSecretsName: argjolan-registry-credentials
+
+resources:
+  requests:
+    cpu: 20m
+    memory: 64Mi
+  limits:
+    cpu: 20m
+    memory: 64Mi
+
+servicePort: 1024
+
+tls: true
+ingressAnnotations:
+  nginx.ingress.kubernetes.io/rewrite-target: /$2
