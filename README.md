@@ -6,7 +6,7 @@
 
 ```shell
 npm install
-npm start
+npm run watch
 ```
 
 ### With Docker
